@@ -8,7 +8,8 @@
 #define QOS         1
 #define TIMEOUT     10000L
 
-bmp280_t bmp280;  // Assuming this is your sensor object
+// Initialize BMP280 object with I2C bus 1 and I2C address 0x76
+BMP280 bmp280(1, 0x76);
 
 // MQTT configuration
 mqtt::async_client client(ADDRESS, CLIENTID);
@@ -22,10 +23,10 @@ void publish_data(float temperature, float pressure) {
 }
 
 int main() {
-    // Initialize BMP280 sensor (assuming this is already implemented in bmp280.cpp)
-    if (!bmp280_init(&bmp280)) {
-        std::cerr << "Failed to initialize BMP280!" << std::endl;
-        return -1;
+    // Initialize BMP280 sensor
+    if (!bmp280.begin()) {
+        std::cerr << "Failed to initialize BMP280" << std::endl;
+        return 1;
     }
 
     // Connect to MQTT broker
@@ -39,15 +40,15 @@ int main() {
 
     // Main loop to read sensor data and publish via MQTT
     while (true) {
-        float temperature, pressure;
-        if (bmp280_read(&bmp280, &temperature, &pressure)) {
-            std::cout << "Temperature: " << temperature << " C, Pressure: " << pressure << " hPa" << std::endl;
-            publish_data(temperature, pressure);
-        } else {
-            std::cerr << "Failed to read sensor data!" << std::endl;
-        }
+        float temperature = bmp280.readTemperature();
+        float pressure = bmp280.readPressure();
 
-        // Wait for some time before next read
+        std::cout << "Temperature: " << temperature << " °C, Pressure: " << pressure << " hPa" << std::endl;
+
+        // Publish data to MQTT
+        publish_data(temperature, pressure);
+
+        // Sleep for 5 seconds before reading again
         sleep(5);
     }
 
